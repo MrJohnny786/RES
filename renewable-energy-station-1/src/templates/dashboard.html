@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Renewable Energy Station Dashboard</title>
+    <style>
+        .component-card {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin: 10px;
+            border-radius: 5px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .status-ok {
+            color: green;
+        }
+
+        .status-warning {
+            color: orange;
+        }
+
+        .status-error {
+            color: red;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Renewable Energy Station Dashboard</h1>
+
+    <div class="grid">
+        <!-- Batteries Section -->
+        <div class="component-card">
+            <h2>Available Batteries</h2>
+            {% for battery in batteries %}
+            <div>
+                <h3>{{ battery }}</h3>
+                {% set battery_obj = battery_factory.create_battery(battery) %}
+                <ul>
+                    <li>Model: {{ battery_obj.model_name }}</li>
+                    <li>Capacity: {{ battery_obj.capacity }} GWh</li>
+                    <li>Charge Level: {{ "%.2f"|format(battery_obj.charge_level) }} GWh</li>
+                    <li>Status: {{ battery_obj.status }}</li>
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Solar Panel Section -->
+        <div class="component-card">
+            <h2>Solar Panel Status</h2>
+            <p>{{ solar_status }}</p>
+        </div>
+
+        <!-- Wind Turbine Section -->
+        <div class="component-card">
+            <h2>Wind Turbine Status</h2>
+            <p>{{ wind_status }}</p>
+        </div>
+
+        <!-- Grid Section -->
+        <div class="component-card">
+            <h2>Grid Status</h2>
+            {% if grid_status.overloaded %}
+            <p class="status-error">OVERLOADED</p>
+            {% else %}
+            <p class="status-ok">Normal Operation</p>
+            {% endif %}
+            <ul>
+                <li>Grid ID: {{ grid_status.grid_id }}</li>
+                <li>Capacity: {{ grid_status.capacity }} MW</li>
+                <li>Current Load: {{ grid_status.current_load }} MW</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Auto-refresh the dashboard every 30 seconds
+        setTimeout(() => {
+            window.location.reload();
+        }, 30000);
+    </script>
+</body>
+
+</html>

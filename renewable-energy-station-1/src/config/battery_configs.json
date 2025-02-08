@@ -1,0 +1,18 @@
+{
+    "moss_landing": {
+        "model_name": "Vistra Moss Landing",
+        "capacity": 1.6,
+        "max_charge_rate": 0.4,
+        "max_discharge_rate": 0.4,
+        "manufactured_date": "2021-08",
+        "eoc_voltage": 4.2
+    },
+    "hornsdale": {
+        "model_name": "Tesla Hornsdale",
+        "capacity": 0.194,
+        "max_charge_rate": 0.150,
+        "max_discharge_rate": 0.193,
+        "manufactured_date": "2017-12",
+        "eoc_voltage": 4.2
+    }
+}
