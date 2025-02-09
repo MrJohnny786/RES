@@ -15,7 +15,8 @@ services:
       - PYTHONPATH=/app/src
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/renewable_energy
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - renewable-network
 
@@ -30,6 +31,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./compose/local/timescaledb/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - renewable-network
 

@@ -14,8 +14,8 @@
         <nav>
             <ul>
                 <li><a href="{{ url_for('index') }}">Dashboard</a></li>
-                <li><a href="{{ url_for('batteries') }}">Batteries</a></li>
-                <!-- <li><a href="{{ url_for('status') }}">API Status</a></li> -->
+                <li><a href="{{ url_for('batteries.list_batteries') }}">Batteries</a></li>
+                <li><a href="{{ url_for('scenarios.list_scenarios') }}">Scenarios</a></li>
             </ul>
         </nav>
     </header>

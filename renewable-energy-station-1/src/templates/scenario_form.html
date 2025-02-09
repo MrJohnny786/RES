@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="scenario-form">
+    {% if edit_mode %}
+    <h1>Edit Scenario</h1>
+    {% else %}
+    <h1>Create New Scenario</h1>
+    {% endif %}
+
+    <form method="POST"
+        action="{{ url_for('scenarios.edit_scenario', id=scenario.id) if edit_mode else url_for('scenarios.create_scenario') }}">
+        <!-- Basic Information -->
+        <section class="form-section">
+            <h2>Basic Information</h2>
+            <div class="form-group">
+                <label for="name">Scenario Name:</label>
+                <input type="text" id="name" name="name" value="{{ scenario.name if edit_mode }}" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea id="description" name="description"
+                    rows="3">{{ scenario.description if edit_mode }}</textarea>
+            </div>
+        </section>
+
+        <!-- Location Information -->
+        <section class="form-section">
+            <h2>Location Details</h2>
+            <div class="form-group">
+                <label for="location_name">Location Name:</label>
+                <input type="text" id="location_name" name="location_name" required>
+            </div>
+            <div class="form-group">
+                <label for="latitude">Latitude:</label>
+                <input type="number" id="latitude" name="latitude" step="0.000001" required>
+            </div>
+            <div class="form-group">
+                <label for="longitude">Longitude:</label>
+                <input type="number" id="longitude" name="longitude" step="0.000001" required>
+            </div>
+            <div class="form-group">
+                <label for="timezone">Timezone:</label>
+                <input type="text" id="timezone" name="timezone" required>
+            </div>
+            <div class="form-group">
+                <label for="solar_hours">Average Solar Hours/Day:</label>
+                <input type="number" id="solar_hours" name="solar_hours" step="0.1" required>
+            </div>
+            <div class="form-group">
+                <label for="wind_speed">Average Wind Speed (m/s):</label>
+                <input type="number" id="wind_speed" name="wind_speed" step="0.1" required>
+            </div>
+        </section>
+
+        <!-- Battery Configuration -->
+        <section class="form-section">
+            <h2>Battery Configuration</h2>
+            <div id="battery-configs">
+                {% for battery_type in available_batteries %}
+                <div class="battery-config">
+                    <label>
+                        <input type="checkbox" name="batteries" value="{{ battery_type }}">
+                        {{ battery_type }}
+                    </label>
+                    <input type="number" name="battery_quantity_{{ battery_type }}" value="1" min="1"
+                        class="quantity-input">
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        <!-- Solar Configuration -->
+        <section class="form-section">
+            <h2>Solar Panel Configuration</h2>
+            <div class="form-group">
+                <label for="solar_capacity">Capacity (kW):</label>
+                <input type="number" id="solar_capacity" name="solar_capacity" step="0.1" required>
+            </div>
+            <div class="form-group">
+                <label for="solar_efficiency">Efficiency (%):</label>
+                <input type="number" id="solar_efficiency" name="solar_efficiency" step="0.1" min="0" max="100"
+                    required>
+            </div>
+            <div class="form-group">
+                <label for="solar_quantity">Quantity:</label>
+                <input type="number" id="solar_quantity" name="solar_quantity" min="1" required>
+            </div>
+        </section>
+
+        <!-- Wind Turbine Configuration -->
+        <section class="form-section">
+            <h2>Wind Turbine Configuration</h2>
+            <div class="form-group">
+                <label for="wind_capacity">Capacity (kW):</label>
+                <input type="number" id="wind_capacity" name="wind_capacity" step="0.1" required>
+            </div>
+            <div class="form-group">
+                <label for="wind_quantity">Quantity:</label>
+                <input type="number" id="wind_quantity" name="wind_quantity" min="1" required>
+            </div>
+        </section>
+
+        <!-- Grid Configuration -->
+        <section class="form-section">
+            <h2>Grid Connection</h2>
+            <div class="form-group">
+                <label for="grid_id">Grid ID:</label>
+                <input type="text" id="grid_id" name="grid_id" required>
+            </div>
+            <div class="form-group">
+                <label for="grid_capacity">Capacity (MW):</label>
+                <input type="number" id="grid_capacity" name="grid_capacity" step="0.1" required>
+            </div>
+        </section>
+
+        <button type="submit" class="btn btn-primary">Create Scenario</button>
+    </form>
+</div>
+
+<style>
+    .scenario-form {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .form-section {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+
+    .form-group {
+        margin-bottom: 15px;
+    }
+
+    label {
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .battery-config {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .quantity-input {
+        width: 80px !important;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+</style>
+{% endblock %}

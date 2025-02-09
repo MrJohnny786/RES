@@ -12,6 +12,13 @@ class Battery:
         manufactured_date: str,
         eoc_voltage: float = 4.2,
         charge_level: float = 0.0,
+        requires_eoc: bool = False,  # Whether battery needs EOC for 100% charge
+        min_safe_charge: float = 0.15,  # 15% minimum safe charge
+        max_safe_charge: float = 0.90,  # 90% maximum safe charge without EOC
+        charge_rate_curve: dict = None,  # Charge rate multipliers at different levels
+        discharge_rate_curve: dict = None,  # Discharge rate multipliers at different levels
+        temperature_limits: dict = None,  # Temperature operating limits
+        cycle_life: int = 10000,  # Expected cycle life
     ):
 
         self.model_name = model_name
@@ -24,21 +31,87 @@ class Battery:
         self.cycle_count = 0
         self.status = "Ready"
 
-    def charge(self, amount: float) -> None:
-        """Charge the battery with rate limiting"""
+        # New attributes
+        self.requires_eoc = requires_eoc
+        self.min_safe_charge = min_safe_charge
+        self.max_safe_charge = max_safe_charge
+        self.charge_rate_curve = charge_rate_curve or {
+            0.0: 1.0,  # 0% charge -> 100% rate
+            0.5: 0.8,  # 50% charge -> 80% rate
+            0.7: 0.6,  # 70% charge -> 60% rate
+            0.8: 0.4,  # 80% charge -> 40% rate
+            0.9: 0.2,  # 90% charge -> 20% rate
+        }
+        self.discharge_rate_curve = discharge_rate_curve or {
+            0.2: 0.6,  # 20% charge -> 60% rate
+            0.3: 0.8,  # 30% charge -> 80% rate
+            0.5: 1.0,  # 50% charge -> 100% rate
+            0.7: 0.9,  # 70% charge -> 90% rate
+            0.9: 0.7,  # 90% charge -> 70% rate
+        }
+        self.temperature_limits = temperature_limits or {
+            "min_operating": 0,
+            "max_operating": 45,
+            "optimal_min": 15,
+            "optimal_max": 35,
+        }
+        self.cycle_life = cycle_life
+        self.health = 100.0  # Battery health percentage
+
+    def get_current_charge_rate(self) -> float:
+        """Calculate current maximum charge rate based on charge level"""
+        charge_percentage = self.charge_level / self.capacity
+
+        # Find the appropriate rate multiplier
+        rate_multiplier = 1.0
+        for threshold, multiplier in sorted(self.charge_rate_curve.items()):
+            if charge_percentage >= threshold:
+                rate_multiplier = multiplier
+            else:
+                break
+
+        return self.max_charge_rate * rate_multiplier
+
+    def get_current_discharge_rate(self) -> float:
+        """Calculate current maximum discharge rate based on charge level"""
+        charge_percentage = self.charge_level / self.capacity
+
+        # Find the appropriate rate multiplier
+        rate_multiplier = 1.0
+        for threshold, multiplier in sorted(self.discharge_rate_curve.items()):
+            if charge_percentage >= threshold:
+                rate_multiplier = multiplier
+            else:
+                break
+
+        return self.max_discharge_rate * rate_multiplier
+
+    def charge(self, amount: float) -> float:
+        """Charge the battery with rate limiting and safety checks"""
         if amount < 0:
             raise ValueError("Charge amount must be positive")
-        if amount > self.max_charge_rate:
-            raise ValueError(f"Charge rate cannot exceed {self.max_charge_rate} GW")
+
+        current_max_rate = self.get_current_charge_rate()
+        if amount > current_max_rate:
+            amount = current_max_rate
 
         prev_level = self.charge_level
-        self.charge_level = min(self.capacity, self.charge_level + amount)
+        target_level = self.charge_level + amount
 
+        # Check charging limits
+        if self.requires_eoc and not self.status.startswith("EOC"):
+            target_level = min(target_level, self.capacity * self.max_safe_charge)
+
+        self.charge_level = min(self.capacity, target_level)
+
+        # Update status and cycles
         if self.is_full():
             self.end_of_charge()
-
-        if prev_level < self.capacity and self.charge_level >= self.capacity:
+        elif prev_level < self.capacity and self.charge_level >= self.capacity:
             self.cycle_count += 1
+            self.update_health()
+
+        return self.charge_level - prev_level  # Return actual amount charged
 
     def discharge(self, amount: float) -> None:
         """Discharge the battery with rate limiting"""
@@ -86,6 +159,10 @@ class Battery:
         min_voltage = 3.2
         voltage_range = self.eoc_voltage - min_voltage
         return min_voltage + (voltage_range * (self.charge_level / self.capacity))
+
+    def update_health(self):
+        """Update battery health based on cycles"""
+        self.health = max(0, 100 * (1 - (self.cycle_count / self.cycle_life)))
 
 
 class BatteryFactory:

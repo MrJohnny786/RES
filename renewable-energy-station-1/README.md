@@ -64,7 +64,8 @@ renewable-energy-station
 
 To run the application, execute the following command:
 ```
-python src/app.py
+docker-compose up --build # start
+docker-compose down -v # delete volumes and delete
 ```
 
 Visit `http://localhost:5000` in your web browser to access the application.

@@ -16,8 +16,9 @@
                 <p>Max Discharge Rate: {{ battery.max_discharge_rate }} GW</p>
                 <p>Manufactured: {{ battery.manufactured_date }}</p>
             </div>
-            <a href="{{ url_for('battery_detail', battery_type=battery_type) }}" class="btn btn-primary">View
-                Details</a>
+            <a href="{{ url_for('batteries.battery_detail', battery_type=battery_type) }}" class="btn btn-primary">
+                View Details
+            </a>
         </div>
         {% endfor %}
     </div>

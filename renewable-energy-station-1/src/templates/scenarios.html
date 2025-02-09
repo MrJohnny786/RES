@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="scenarios">
+    <h1>Energy Scenarios</h1>
+
+    <div class="scenario-actions">
+        <a href="{{ url_for('scenarios.create_scenario') }}" class="btn btn-primary">Create New Scenario</a>
+    </div>
+
+    {% if scenarios %}
+    <div class="scenarios-list">
+        {% for scenario in scenarios %}
+        <div class="scenario-card">
+            <h3>{{ scenario.name }}</h3>
+            <p>{{ scenario.description }}</p>
+
+            <div class="location-info">
+                <h4>Location</h4>
+                <p>{{ scenario.location.name }}</p>
+                <p>Coordinates: {{ scenario.location.latitude }}, {{ scenario.location.longitude }}</p>
+                <p>Average Solar Hours: {{ scenario.location.average_solar_hours }}</p>
+                <p>Average Wind Speed: {{ scenario.location.average_wind_speed }} m/s</p>
+            </div>
+
+            <div class="components">
+                <h4>Components</h4>
+
+                <div class="batteries">
+                    <h5>Batteries</h5>
+                    <ul>
+                        {% for battery in scenario.batteries %}
+                        <li>{{ battery.battery_type }} (x{{ battery.quantity }})</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="solar">
+                    <h5>Solar Panels</h5>
+                    <ul>
+                        {% for panel in scenario.solar_panels %}
+                        <li>{{ panel.capacity }}kW @ {{ "%.1f"|format(panel.efficiency * 100) }}% (x{{ panel.quantity
+                            }})</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="wind">
+                    <h5>Wind Turbines</h5>
+                    <ul>
+                        {% for turbine in scenario.wind_turbines %}
+                        <li>{{ turbine.capacity }}kW (x{{ turbine.quantity }})</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div class="grid">
+                    <h5>Grid Connections</h5>
+                    <ul>
+                        {% for grid in scenario.grid_connections %}
+                        <li>{{ grid.grid_id }} ({{ grid.capacity }}MW)</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="scenario-status">
+                Status: {% if scenario.is_active %}
+                <span class="status-active">Active</span>
+                {% else %}
+                <span class="status-inactive">Inactive</span>
+                {% endif %}
+            </div>
+
+            <div class="scenario-actions">
+                <button onclick="location.href='/scenarios/edit/{{ scenario.id }}'" class="btn btn-secondary">
+                    Edit
+                </button>
+                {% if scenario.is_active %}
+                <button onclick="deactivateScenario('{{ scenario.id }}')" class="btn btn-warning">
+                    Deactivate
+                </button>
+                {% else %}
+                <button onclick="activateScenario('{{ scenario.id }}')" class="btn btn-success">
+                    Activate
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="no-scenarios">
+        <p>No scenarios found. Create a new one to get started!</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .scenarios {
+        padding: 20px;
+    }
+
+    .scenario-card {
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 15px;
+        margin: 10px 0;
+    }
+
+    .components {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 15px 0;
+    }
+
+    .btn {
+        padding: 8px 16px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        margin: 5px;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+        color: white;
+    }
+
+    .btn-warning {
+        background-color: #ffc107;
+        color: black;
+    }
+
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+
+    .status-active {
+        color: green;
+    }
+
+    .status-inactive {
+        color: red;
+    }
+</style>
+
+<script>
+    function activateScenario(id) {
+        if (confirm('Are you sure you want to activate this scenario?')) {
+            fetch(`/scenarios/${id}/activate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(() => window.location.reload());
+        }
+    }
+
+    function deactivateScenario(id) {
+        if (confirm('Are you sure you want to deactivate this scenario?')) {
+            fetch(`/scenarios/${id}/deactivate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(() => window.location.reload());
+        }
+    }
+</script>
+{% endblock %}
