@@ -25,14 +25,44 @@ def list_scenarios():
 def create_scenario():
     if request.method == "POST":
         db = SessionLocal()
-        # ... existing scenario creation logic ...
+
+        # Create location
+        location = Location(
+            name=request.form["location_name"],
+            latitude=float(request.form["latitude"]),
+            longitude=float(request.form["longitude"]),
+            timezone=request.form["timezone"],
+            average_solar_hours=float(request.form["solar_hours"]),
+            average_wind_speed=float(request.form["wind_speed"]),
+        )
+        db.add(location)
+
+        # Create scenario
+        scenario = Scenario(
+            name=request.form["name"],
+            description=request.form["description"],
+            location=location,
+        )
+        db.add(scenario)
+
+        # Add batteries
+        battery_types = request.form.getlist("batteries")
+        for battery_type in battery_types:
+            quantity = int(request.form.get(f"battery_quantity_{battery_type}", 1))
+            battery = ScenarioBattery(
+                scenario=scenario, battery_type=battery_type, quantity=quantity
+            )
+            db.add(battery)
+
+        # Rest of the scenario creation...
         db.commit()
-        db.close()
         return redirect(url_for("scenarios.list_scenarios"))
 
     return render_template(
         "scenario_form.html",
+        scenario=None,
         available_batteries=battery_factory.get_available_batteries(),
+        edit_mode=False,
     )
 
 

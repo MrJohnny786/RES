@@ -63,8 +63,9 @@
                         <input type="checkbox" name="batteries" value="{{ battery_type }}">
                         {{ battery_type }}
                     </label>
-                    <input type="number" name="battery_quantity_{{ battery_type }}" value="1" min="1"
-                        class="quantity-input">
+                    <input type="number" name="battery_quantity_{{ battery_type }}"
+                        value="{{ scenario.batteries|selectattr('battery_type', 'equalto', battery_type)|map(attribute='quantity')|first|default(1) if edit_mode else 1 }}"
+                        min="1" class="quantity-input">
                 </div>
                 {% endfor %}
             </div>
@@ -114,7 +115,9 @@
             </div>
         </section>
 
-        <button type="submit" class="btn btn-primary">Create Scenario</button>
+        <button type="submit" class="btn btn-primary">
+            {% if edit_mode %}Update{% else %}Create{% endif %} Scenario
+        </button>
     </form>
 </div>
 

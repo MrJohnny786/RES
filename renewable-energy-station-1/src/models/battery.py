@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from flask import Blueprint, render_template
 
 
 class Battery:
@@ -12,13 +13,13 @@ class Battery:
         manufactured_date: str,
         eoc_voltage: float = 4.2,
         charge_level: float = 0.0,
-        requires_eoc: bool = False,  # Whether battery needs EOC for 100% charge
-        min_safe_charge: float = 0.15,  # 15% minimum safe charge
-        max_safe_charge: float = 0.90,  # 90% maximum safe charge without EOC
-        charge_rate_curve: dict = None,  # Charge rate multipliers at different levels
-        discharge_rate_curve: dict = None,  # Discharge rate multipliers at different levels
-        temperature_limits: dict = None,  # Temperature operating limits
-        cycle_life: int = 10000,  # Expected cycle life
+        requires_eoc: bool = False,
+        min_safe_charge: float = 0.15,
+        max_safe_charge: float = 0.90,
+        charge_rate_curve: dict = None,
+        discharge_rate_curve: dict = None,
+        temperature_limits: dict = None,
+        cycle_life: int = 10000,
     ):
 
         self.model_name = model_name
@@ -166,7 +167,7 @@ class Battery:
 
 
 class BatteryFactory:
-    def __init__(self, config_path: str = "config/battery_configs.json"):
+    def __init__(self, config_path: str = "./config/battery_configs.json"):
         self.config_path = Path(config_path)
         self.battery_configs = self._load_configs()
 
@@ -181,7 +182,7 @@ class BatteryFactory:
         """Return list of available battery configurations"""
         return list(self.battery_configs.keys())
 
-    def create_battery(self, battery_type: str) -> "Battery":
+    def create_battery(self, battery_type: str) -> Battery:
         """Create a battery instance from configuration"""
         if battery_type not in self.battery_configs:
             raise ValueError(f"Unknown battery type: {battery_type}")
@@ -192,7 +193,6 @@ class BatteryFactory:
     def add_battery_config(self, name: str, config: dict) -> None:
         """Add a new battery configuration"""
         self.battery_configs[name] = config
-        # Save to file
         with open(self.config_path, "w") as f:
             json.dump(self.battery_configs, f, indent=4)
 
@@ -219,22 +219,28 @@ hornsdale = Battery(
     eoc_voltage=4.2,
 )
 
-# # Create battery factory
-# factory = BatteryFactory()
+bp = Blueprint("batteries", __name__, url_prefix="/batteries")
 
-# # List available batteries
-# print(factory.get_available_batteries())  # ['moss_landing', 'hornsdale']
+# Get absolute path to config file
+config_path = Path("/app/config/battery_configs.json")
+battery_factory = BatteryFactory(str(config_path))
 
-# # Create a specific battery
-# moss_landing = factory.create_battery("moss_landing")
 
-# # Add a new battery configuration
-# new_battery_config = {
-#     "model_name": "New Battery Model",
-#     "capacity": 2.0,
-#     "max_charge_rate": 0.5,
-#     "max_discharge_rate": 0.5,
-#     "manufactured_date": "2024-01",
-#     "eoc_voltage": 4.2,
-# }
-# factory.add_battery_config("new_battery", new_battery_config)
+@bp.route("/")
+def list_batteries():
+    try:
+        available_batteries = battery_factory.get_available_batteries()
+        print(f"Found batteries: {available_batteries}")  # Debug line
+        return render_template(
+            "batteries.html",
+            batteries=available_batteries,
+            battery_factory=battery_factory,
+        )
+    except Exception as e:
+        print(f"Error loading batteries: {e}")
+        return render_template(
+            "batteries.html",
+            batteries=[],
+            battery_factory=battery_factory,
+            error=str(e),
+        )

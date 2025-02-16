@@ -1,17 +1,34 @@
+from pathlib import Path
 from flask import Blueprint, render_template, redirect, url_for, request
 from src.models.battery import BatteryFactory
 
 bp = Blueprint("batteries", __name__, url_prefix="/batteries")
-battery_factory = BatteryFactory("config/battery_configs.json")
+
+# Get absolute path to config file
+config_path = Path("/app/config/battery_configs.json")
+
+
+battery_factory = BatteryFactory(str(config_path))
 
 
 @bp.route("/")
 def list_batteries():
-    return render_template(
-        "batteries.html",
-        batteries=battery_factory.get_available_batteries(),
-        battery_factory=battery_factory,
-    )
+    try:
+        available_batteries = battery_factory.get_available_batteries()
+        print(f"Found batteries: {available_batteries}")  # Debug line
+        return render_template(
+            "batteries.html",
+            batteries=available_batteries,
+            battery_factory=battery_factory,
+        )
+    except Exception as e:
+        print(f"Error loading batteries: {e}")  # Debug line
+        return render_template(
+            "batteries.html",
+            batteries=[],
+            battery_factory=battery_factory,
+            error=str(e),
+        )
 
 
 @bp.route("/<battery_type>")
