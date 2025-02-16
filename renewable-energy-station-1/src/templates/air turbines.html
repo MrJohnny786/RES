@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="air-turbine-management">
+    <h1>Air Turbine Management</h1>
+
+    <div class="available-air-turbines">
+        <h2>Available Air Turbine Models</h2>
+        {% for turbine_type in air_turbines %}
+        <div class="air-turbine-card">
+            {% set turbine = turbine_factory.create_turbine(turbine_type) %}
+            <h3>{{ turbine.model_name }}</h3>
+            <div class="air-turbine-specs">
+                <p>Capacity: {{ turbine.capacity }} kW</p>
+                <p>Rotor Diameter: {{ turbine.rotor_diameter }} m</p>
+                <p>Manufactured: {{ turbine.manufactured_date }}</p>
+            </div>
+            <a href="{{ url_for('air_turbines.turbine_detail', turbine_type=turbine_type) }}" class="btn btn-primary">
+                View Details
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .air-turbine-management {
+        padding: 20px;
+    }
+
+    .air-turbine-card {
+        border: 1px solid #ccc;
+        padding: 15px;
+        margin: 10px;
+        border-radius: 5px;
+    }
+</style>
+{% endblock %}

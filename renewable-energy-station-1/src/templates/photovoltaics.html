@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="photovoltaic-management">
+    <h1>Photovoltaic Management</h1>
+
+    <div class="available-photovoltaics">
+        <h2>Available Photovoltaic Models</h2>
+        {% for pv_type in photovoltaics %}
+        <div class="photovoltaic-card">
+            {% set pv = pv_factory.create_photovoltaic(pv_type) %}
+            <h3>{{ pv.model_name }}</h3>
+            <div class="photovoltaic-specs">
+                <p>Capacity: {{ pv.capacity }} kW</p>
+                <p>Efficiency: {{ "%.2f"|format(pv.efficiency * 100) }}%</p>
+                <p>Manufactured: {{ pv.manufactured_date }}</p>
+            </div>
+            <a href="{{ url_for('photovoltaics.pv_detail', pv_type=pv_type) }}" class="btn btn-primary">
+                View Details
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .photovoltaic-management {
+        padding: 20px;
+    }
+
+    .photovoltaic-card {
+        border: 1px solid #ccc;
+        padding: 15px;
+        margin: 10px;
+        border-radius: 5px;
+    }
+</style>
+{% endblock %}

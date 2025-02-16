@@ -20,9 +20,18 @@ def create_app():
     app.register_blueprint(batteries.bp)
     app.register_blueprint(scenarios.bp)
 
+    # Import and register the air_turbines blueprint
+    from src.api import air_turbines
+    app.register_blueprint(air_turbines.bp)
+
     # Initialize components
     app.solar_panel = Photovoltaic(capacity=500, efficiency=0.15)
-    app.wind_turbine = WindTurbine(capacity=2000, location="Main Site")
+    app.wind_turbine = WindTurbine(
+        model_name="Default Wind Turbine",
+        capacity=2000,  # kW
+        rotor_diameter=120,  # meters
+        manufactured_date="2023-01"
+    )
     app.grid = Grid("MAIN-GRID-01", capacity=10000, current_load=0)
 
     @app.context_processor
