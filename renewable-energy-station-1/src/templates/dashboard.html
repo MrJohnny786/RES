@@ -1,79 +1,184 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="grid">
-    <!-- Batteries Section -->
-    <div class="component-card">
-        <h2>Available Batteries</h2>
-        {% for battery in batteries %}
-        <div>
-            <h3>{{ battery }}</h3>
-            {% set battery_obj = battery_factory.create_battery(battery) %}
-            <ul>
-                <li>Model: {{ battery_obj.model_name }}</li>
-                <li>Capacity: {{ battery_obj.capacity }} GWh</li>
-                <li>Charge Level: {{ "%.2f"|format(battery_obj.charge_level) }} GWh</li>
-                <li>Status: {{ battery_obj.status }}</li>
-            </ul>
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="display-5 mb-3">
+                <i class="fas fa-tachometer-alt"></i> System Dashboard
+            </h1>
         </div>
-        {% endfor %}
     </div>
 
-    <!-- Solar Panel Section -->
-    <div class="component-card">
-        <h2>Solar Panel Status</h2>
-        <p>{{ solar_status }}</p>
-    </div>
+    <div class="row g-4">
+        <!-- Batteries Section -->
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-battery-full"></i> Battery Storage
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% for battery in batteries %}
+                    {% set battery_obj = battery_factory.create_battery(battery) %}
+                    <div class="battery-item mb-4">
+                        <h5>{{ battery_obj.model_name }}</h5>
+                        <div class="progress mb-3">
+                            {% set charge_percentage = (battery_obj.charge_level / battery_obj.capacity) * 100 %}
+                            <div class="progress-bar bg-success" role="progressbar" 
+                                 style="width: {{ charge_percentage }}%">
+                                {{ "%.1f"|format(charge_percentage) }}%
+                            </div>
+                        </div>
+                        <div class="row g-2 text-center">
+                            <div class="col-6">
+                                <div class="p-2 border rounded bg-light">
+                                    <small class="text-muted d-block">Capacity</small>
+                                    <strong>{{ "%.1f"|format(battery_obj.capacity) }} GWh</strong>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 border rounded bg-light">
+                                    <small class="text-muted d-block">Current Charge</small>
+                                    <strong>{{ "%.1f"|format(battery_obj.charge_level) }} GWh</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
 
-    <!-- Wind Turbine Section -->
-    <div class="component-card">
-        <h2>Wind Turbine Status</h2>
-        <p>{{ wind_status }}</p>
-    </div>
+        <!-- Solar Generation Section -->
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0">
+                        <i class="fas fa-solar-panel"></i> Solar Generation
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% for panel in solar_panels %}
+                    {% set pv = pv_factory.create_pv(panel.model_type) %}
+                    <div class="solar-item mb-4">
+                        <h5>{{ pv.model_name }}</h5>
+                        <div class="progress mb-3">
+                            {% set efficiency = pv.efficiency * 100 %}
+                            <div class="progress-bar bg-warning" role="progressbar" 
+                                 style="width: {{ efficiency }}%">
+                                {{ "%.1f"|format(efficiency) }}% Efficiency
+                            </div>
+                        </div>
+                        <div class="row g-2 text-center">
+                            <div class="col-6">
+                                <div class="p-2 border rounded bg-light">
+                                    <small class="text-muted d-block">Capacity</small>
+                                    <strong>{{ "%.1f"|format(pv.capacity_per_panel * panel.quantity) }} kW</strong>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-2 border rounded bg-light">
+                                    <small class="text-muted d-block">Current Output</small>
+                                    <strong>{{ "%.1f"|format(pv.calculate_energy_production(solar_status.irradiance, solar_status.temperature)) }} kW</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
 
-    <!-- Grid Section -->
-    <div class="component-card">
-        <h2>Grid Status</h2>
-        {% if grid_status.overloaded %}
-        <p class="status-error">OVERLOADED</p>
-        {% else %}
-        <p class="status-ok">Normal Operation</p>
-        {% endif %}
-        <ul>
-            <li>Grid ID: {{ grid_status.grid_id }}</li>
-            <li>Capacity: {{ grid_status.capacity }} MW</li>
-            <li>Current Load: {{ grid_status.current_load }} MW</li>
-        </ul>
+        <!-- Wind Generation Section -->
+        <div class="col-lg-6">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-wind"></i> Wind Generation
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% for turbine in wind_turbines %}
+                    {% set wind = turbine_factory.create_turbine(turbine.turbine_type) %}
+                    <div class="wind-item mb-4">
+                        <h5>{{ wind.model_name }}</h5>
+                        <div class="row g-2 text-center">
+                            <div class="col-4">
+                                <div class="p-2 border rounded bg-light">
+                                    <small class="text-muted d-block">Rated Capacity</small>
+                                    <strong>{{ wind.capacity }} MW</strong>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded bg-light">
+                                    <small class="text-muted d-block">Wind Speed</small>
+                                    <strong>{{ "%.1f"|format(wind_status.wind_speed) }} m/s</strong>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 border rounded bg-light">
+                                    <small class="text-muted d-block">Current Output</small>
+                                    <strong>{{ "%.1f"|format(wind.calculate_output(wind_status.wind_speed)) }} MW</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid Status Section -->
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header {% if grid_status.overloaded %}bg-danger{% else %}bg-success{% endif %} text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-plug"></i> Grid Status
+                        <span class="float-end">
+                            {% if grid_status.overloaded %}
+                            <i class="fas fa-exclamation-triangle"></i> OVERLOADED
+                            {% else %}
+                            <i class="fas fa-check-circle"></i> Normal Operation
+                            {% endif %}
+                        </span>
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-4">
+                        <div class="col-md-3">
+                            <div class="metric-card text-center p-3 border rounded">
+                                <h6 class="text-muted mb-2">Grid ID</h6>
+                                <h4 class="mb-0">{{ grid_status.grid_id }}</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card text-center p-3 border rounded">
+                                <h6 class="text-muted mb-2">Total Capacity</h6>
+                                <h4 class="mb-0">{{ grid_status.capacity }} MW</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card text-center p-3 border rounded">
+                                <h6 class="text-muted mb-2">Current Load</h6>
+                                <h4 class="mb-0 {% if grid_status.overloaded %}text-danger{% endif %}">
+                                    {{ grid_status.current_load }} MW
+                                </h4>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="metric-card text-center p-3 border rounded">
+                                <h6 class="text-muted mb-2">Power Quality</h6>
+                                <h4 class="mb-0">{{ "%.1f"|format(grid_status.power_quality * 100) }}%</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
-
-<style>
-    .component-card {
-        border: 1px solid #ccc;
-        padding: 15px;
-        margin: 10px;
-        border-radius: 5px;
-    }
-
-    .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
-        padding: 20px;
-    }
-
-    .status-ok {
-        color: green;
-    }
-
-    .status-warning {
-        color: orange;
-    }
-
-    .status-error {
-        color: red;
-    }
-</style>
 
 <script>
     // Auto-refresh the dashboard every 30 seconds

@@ -38,82 +38,67 @@ def list_scenarios():
 def create_scenario():
     if request.method == "POST":
         db = SessionLocal()
-
-        # Create location
-        location = Location(
-            name=request.form["location_name"],
-            latitude=float(request.form["latitude"]),
-            longitude=float(request.form["longitude"]),
-            timezone=request.form.get("timezone", "UTC"),
-            average_solar_hours=float(request.form["solar_hours"]),
-            average_wind_speed=float(request.form["wind_speed"]),
-        )
-        db.add(location)
-
-        # Create scenario
-        scenario = Scenario(
-            name=request.form["name"],
-            description=request.form["description"],
-            location=location,
-        )
-        db.add(scenario)
-
-        # Add batteries
-        battery_types = request.form.getlist("batteries")
-        for battery_type in battery_types:
-            quantity = int(request.form.get(f"battery_quantity_{battery_type}", 1))
-            battery = ScenarioBattery(
-                scenario=scenario, battery_type=battery_type, quantity=quantity
+        try:
+            # Create new scenario
+            scenario = Scenario(
+                name=request.form["name"], description=request.form["description"]
             )
-            db.add(battery)
 
-        # Add PV panels
-        pv_types = request.form.getlist("pvs")
-        for pv_type in pv_types:
-            quantity = int(request.form.get(f"pv_quantity_{pv_type}", 1))
-            pv_config = pv_factory.pv_configs[pv_type]
-            pv = ScenarioPhotovoltaic(
-                scenario=scenario,
-                model_type=pv_type,
-                capacity=pv_config["capacity_per_panel"],
-                efficiency=pv_config["efficiency"],
-                quantity=quantity,
-                is_active=True,
+            # Create and link location
+            location = Location(
+                name=request.form["location_name"],
+                latitude=float(request.form["latitude"]),
+                longitude=float(request.form["longitude"]),
+                average_solar_hours=float(request.form["solar_hours"]),
+                average_wind_speed=float(request.form["wind_speed"]),
             )
-            db.add(pv)
+            scenario.location = location
 
-        # Add wind turbines
-        turbine_types = request.form.getlist("turbines")
-        for turbine_type in turbine_types:
-            quantity = int(request.form.get(f"turbine_quantity_{turbine_type}", 1))
-            turbine_config = turbine_factory.turbine_configs[turbine_type]
-            turbine = ScenarioWindTurbine(
-                scenario=scenario,
-                turbine_type=turbine_type,
-                capacity=turbine_config["capacity_per_turbine"],
-                cut_in_speed=turbine_config["cut_in_wind_speed"],
-                cut_out_speed=turbine_config["cut_out_wind_speed"],
-                rated_speed=turbine_config.get("rated_speed", 15.0),
-                quantity=quantity,
+            # Add batteries
+            battery_types = request.form.getlist("batteries")
+            for battery_type in battery_types:
+                quantity = int(request.form.get(f"battery_quantity_{battery_type}", 1))
+                battery = ScenarioBattery(
+                    scenario=scenario, battery_type=battery_type, quantity=quantity
+                )
+                db.add(battery)
+
+            # Add PV panels
+            pv_types = request.form.getlist("pvs")
+            for pv_type in pv_types:
+                quantity = int(request.form.get(f"pv_quantity_{pv_type}", 1))
+                pv = ScenarioPhotovoltaic(
+                    scenario=scenario, model_type=pv_type, quantity=quantity
+                )
+                db.add(pv)
+
+            # Add wind turbines
+            turbine_types = request.form.getlist("turbines")
+            for turbine_type in turbine_types:
+                quantity = int(request.form.get(f"turbine_quantity_{turbine_type}", 1))
+                turbine = ScenarioWindTurbine(
+                    scenario=scenario, turbine_type=turbine_type, quantity=quantity
+                )
+                db.add(turbine)
+
+            # Add grid connection
+            grid_type = request.form.get("grid_type")
+            if grid_type:
+                grid = ScenarioGrid(scenario=scenario, grid_id=grid_type)
+                db.add(grid)
+
+            db.add(scenario)
+            db.commit()
+            return redirect(url_for("scenarios.list_scenarios"))
+
+        except Exception as e:
+            db.rollback()
+            print(f"Error creating scenario: {e}")
+            return render_template(
+                "error.html", error="Failed to create scenario. Please try again."
             )
-            db.add(turbine)
 
-        # Add grid connection
-        grid_type = request.form.get("grid_type")
-        if grid_type:
-            grid_config = grid_factory.grid_configs[grid_type]
-            grid = ScenarioGrid(
-                scenario=scenario,
-                grid_id=grid_type,
-                capacity=grid_config["capacity"],
-                flexible_capacity=grid_config.get("flexible_capacity"),
-                voltage_level=grid_config.get("voltage_level", 110.0),
-            )
-            db.add(grid)
-
-        db.commit()
-        return redirect(url_for("scenarios.list_scenarios"))
-
+    # GET request - show form
     return render_template(
         "scenario_form.html",
         scenario=None,
