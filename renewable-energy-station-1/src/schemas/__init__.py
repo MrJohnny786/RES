@@ -16,10 +16,10 @@ __all__ = [
     "Base",
     "BatteryStatus",
     "BatteryMetrics",
+    "ScenarioBattery",
     "Scenario",
     "Location",
     "ScenarioGrid",
     "ScenarioPhotovoltaic",
     "ScenarioWindTurbine",
-    "ScenarioBattery",
 ]

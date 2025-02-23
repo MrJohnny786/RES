@@ -9,16 +9,29 @@ from src.schemas import (
     ScenarioGrid,
 )
 from src.models.battery import BatteryFactory
+from src.models.photovoltaic_factory import PhotovoltaicFactory
+from src.models.turbine_factory import TurbineFactory
+from src.models.grid_factory import GridFactory
+from pathlib import Path
 
 bp = Blueprint("scenarios", __name__, url_prefix="/scenarios")
-battery_factory = BatteryFactory("config/battery_configs.json")
+
+# Initialize factories
+battery_factory = BatteryFactory("/app/config/battery_configs.json")
+pv_factory = PhotovoltaicFactory("/app/config/pv.json")
+turbine_factory = TurbineFactory("/app/config/turbines.json")
+grid_factory = GridFactory("/app/config/grids.json")
 
 
-@bp.route("/")
+@bp.route("/", methods=["GET"])
 def list_scenarios():
     db = SessionLocal()
     scenarios = db.query(Scenario).all()
-    return render_template("scenarios.html", scenarios=scenarios)
+    return render_template(
+        "scenarios.html",
+        scenarios=scenarios,
+        battery_factory=battery_factory,  # Make sure this is included
+    )
 
 
 @bp.route("/new", methods=["GET", "POST"])
@@ -31,7 +44,7 @@ def create_scenario():
             name=request.form["location_name"],
             latitude=float(request.form["latitude"]),
             longitude=float(request.form["longitude"]),
-            timezone=request.form["timezone"],
+            timezone=request.form.get("timezone", "UTC"),
             average_solar_hours=float(request.form["solar_hours"]),
             average_wind_speed=float(request.form["wind_speed"]),
         )
@@ -54,109 +67,120 @@ def create_scenario():
             )
             db.add(battery)
 
-        # Rest of the scenario creation...
+        # Add PV panels
+        pv_types = request.form.getlist("pvs")
+        for pv_type in pv_types:
+            quantity = int(request.form.get(f"pv_quantity_{pv_type}", 1))
+            pv_config = pv_factory.pv_configs[pv_type]
+            pv = ScenarioPhotovoltaic(
+                scenario=scenario,
+                model_type=pv_type,
+                capacity=pv_config["capacity_per_panel"],
+                efficiency=pv_config["efficiency"],
+                quantity=quantity,
+                is_active=True,
+            )
+            db.add(pv)
+
+        # Add wind turbines
+        turbine_types = request.form.getlist("turbines")
+        for turbine_type in turbine_types:
+            quantity = int(request.form.get(f"turbine_quantity_{turbine_type}", 1))
+            turbine_config = turbine_factory.turbine_configs[turbine_type]
+            turbine = ScenarioWindTurbine(
+                scenario=scenario,
+                turbine_type=turbine_type,
+                capacity=turbine_config["capacity_per_turbine"],
+                cut_in_speed=turbine_config["cut_in_wind_speed"],
+                cut_out_speed=turbine_config["cut_out_wind_speed"],
+                rated_speed=turbine_config.get("rated_speed", 15.0),
+                quantity=quantity,
+            )
+            db.add(turbine)
+
+        # Add grid connection
+        grid_type = request.form.get("grid_type")
+        if grid_type:
+            grid_config = grid_factory.grid_configs[grid_type]
+            grid = ScenarioGrid(
+                scenario=scenario,
+                grid_id=grid_type,
+                capacity=grid_config["capacity"],
+                flexible_capacity=grid_config.get("flexible_capacity"),
+                voltage_level=grid_config.get("voltage_level", 110.0),
+            )
+            db.add(grid)
+
         db.commit()
         return redirect(url_for("scenarios.list_scenarios"))
 
     return render_template(
         "scenario_form.html",
         scenario=None,
-        available_batteries=battery_factory.get_available_batteries(),
         edit_mode=False,
+        battery_factory=battery_factory,
+        pv_factory=pv_factory,
+        turbine_factory=turbine_factory,
+        grid_factory=grid_factory,
+        available_batteries=battery_factory.get_available_batteries(),
+        available_pvs=pv_factory.get_available_pvs(),
+        available_turbines=turbine_factory.get_available_turbines(),
+        available_grids=grid_factory.get_available_grids(),
     )
 
 
 @bp.route("/edit/<int:id>", methods=["GET", "POST"])
 def edit_scenario(id):
+    """Edit an existing scenario"""
     db = SessionLocal()
-    scenario = db.query(Scenario).get(id)
+    scenario = db.query(Scenario).filter(Scenario.id == id).first()
 
     if request.method == "POST":
-        # Update location
-        scenario.location.name = request.form["location_name"]
-        scenario.location.latitude = float(request.form["latitude"])
-        scenario.location.longitude = float(request.form["longitude"])
-        scenario.location.timezone = request.form["timezone"]
-        scenario.location.average_solar_hours = float(request.form["solar_hours"])
-        scenario.location.average_wind_speed = float(request.form["wind_speed"])
-
         # Update scenario details
         scenario.name = request.form["name"]
         scenario.description = request.form["description"]
 
-        # Update batteries
-        for battery in scenario.batteries:
-            db.delete(battery)
+        # Update location details
+        scenario.location.name = request.form["location_name"]
+        scenario.location.latitude = float(request.form["latitude"])
+        scenario.location.longitude = float(request.form["longitude"])
+        scenario.location.average_solar_hours = float(request.form["solar_hours"])
+        scenario.location.average_wind_speed = float(request.form["wind_speed"])
 
-        battery_types = request.form.getlist("batteries")
-        battery_quantities = request.form.getlist("battery_quantities")
-        for battery_type, quantity in zip(battery_types, battery_quantities):
-            battery = ScenarioBattery(
-                scenario=scenario, battery_type=battery_type, quantity=int(quantity)
-            )
-            db.add(battery)
-
-        # Update solar panels
-        for panel in scenario.solar_panels:
-            db.delete(panel)
-
-        solar = ScenarioPhotovoltaic(
-            scenario=scenario,
-            capacity=float(request.form["solar_capacity"]),
-            efficiency=float(request.form["solar_efficiency"])
-            / 100,  # Convert from percentage
-            quantity=int(request.form["solar_quantity"]),
-        )
-        db.add(solar)
-
-        # Update wind turbines
-        for turbine in scenario.wind_turbines:
-            db.delete(turbine)
-
-        wind = ScenarioWindTurbine(
-            scenario=scenario,
-            capacity=float(request.form["wind_capacity"]),
-            cut_in_speed=float(request.form.get("wind_cut_in", 3.0)),
-            rated_speed=float(request.form.get("wind_rated", 15.0)),
-            quantity=int(request.form["wind_quantity"]),
-        )
-        db.add(wind)
-
-        # Update grid connection
-        for grid in scenario.grid_connections:
-            db.delete(grid)
-
-        grid = ScenarioGrid(
-            scenario=scenario,
-            grid_id=request.form["grid_id"],
-            capacity=float(request.form["grid_capacity"]),
-        )
-        db.add(grid)
-
+        # Update components...
         db.commit()
         return redirect(url_for("scenarios.list_scenarios"))
 
     return render_template(
         "scenario_form.html",
         scenario=scenario,
-        available_batteries=battery_factory.get_available_batteries(),
         edit_mode=True,
+        battery_factory=battery_factory,
+        pv_factory=pv_factory,
+        turbine_factory=turbine_factory,
+        grid_factory=grid_factory,
+        available_batteries=battery_factory.get_available_batteries(),
+        available_pvs=pv_factory.get_available_pvs(),
+        available_turbines=turbine_factory.get_available_turbines(),
+        available_grids=grid_factory.get_available_grids(),
     )
 
 
 @bp.route("/<int:id>/activate", methods=["POST"])
 def activate_scenario(id):
+    """Activate a scenario"""
     db = SessionLocal()
-    scenario = db.query(Scenario).get(id)
+    scenario = db.query(Scenario).filter(Scenario.id == id).first()
     scenario.is_active = True
     db.commit()
-    return redirect(url_for("scenarios.list_scenarios"))
+    return {"status": "success"}
 
 
 @bp.route("/<int:id>/deactivate", methods=["POST"])
 def deactivate_scenario(id):
+    """Deactivate a scenario"""
     db = SessionLocal()
-    scenario = db.query(Scenario).get(id)
+    scenario = db.query(Scenario).filter(Scenario.id == id).first()
     scenario.is_active = False
     db.commit()
-    return redirect(url_for("scenarios.list_scenarios"))
+    return {"status": "success"}
