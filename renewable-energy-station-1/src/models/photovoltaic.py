@@ -80,3 +80,44 @@ class Photovoltaic:
             "dimensions": self.dimensions,
             "area": self.get_panel_area(),
         }
+
+    def get_pvgis_forecast(
+        self,
+        latitude: float,
+        longitude: float,
+        installation_angle: float = 35.0,
+        azimuth: float = 0.0,
+        mounting_type: str = "free",
+        system_losses: float = 14.0,
+    ) -> dict:
+        """Get hourly production forecast from PVGIS API"""
+        from src.services.pvgis_service import PVGISService
+
+        # Convert module_type to PVGIS format
+        pv_tech = "crystSi"  # default
+        if self.module_type.lower().find("cdte") >= 0:
+            pv_tech = "CdTe"
+        elif (
+            self.module_type.lower().find("cis") >= 0
+            or self.module_type.lower().find("cigs") >= 0
+        ):
+            pv_tech = "CIS"
+
+        # Calculate total peak power in kWp
+        peak_power = self.capacity_per_panel  # Already in kW
+
+        # Create service and get forecast
+        service = PVGISService()
+        forecast = service.calculate_pv_generation(
+            latitude=latitude,
+            longitude=longitude,
+            peak_power=peak_power,
+            mounting_type=mounting_type,
+            loss=system_losses,
+            angle=installation_angle,
+            aspect=azimuth,
+            pv_technology=pv_tech,
+            cache_key=f"{self.model_name}_{latitude}_{longitude}",
+        )
+
+        return forecast

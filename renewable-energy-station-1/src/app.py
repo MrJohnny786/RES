@@ -13,6 +13,7 @@ from src.api import (
     photovoltaics,
     turbines,
     grids,
+    optimization,
 )  # Import blueprints
 from src.schemas import Base, Scenario, Location  # Import models
 
@@ -25,11 +26,12 @@ def create_app():
     init_db()
 
     # Register blueprints
-    app.register_blueprint(batteries.bp)
-    app.register_blueprint(scenarios.bp)
-    app.register_blueprint(photovoltaics.bp)
-    app.register_blueprint(turbines.bp)
-    app.register_blueprint(grids.bp)
+    app.register_blueprint(batteries.bp, url_prefix="/batteries")
+    app.register_blueprint(scenarios.bp, url_prefix="/scenarios")
+    app.register_blueprint(photovoltaics.bp, url_prefix="/photovoltaics")
+    app.register_blueprint(turbines.bp, url_prefix="/turbines")
+    app.register_blueprint(grids.bp, url_prefix="/grids")
+    app.register_blueprint(optimization.bp)  # Add this line
 
     # Initialize factories
     battery_factory = BatteryFactory("/app/config/battery_configs.json")

@@ -210,6 +210,12 @@
                                 class="btn btn-outline-primary">
                             <i class="fas fa-edit"></i> Edit
                         </button>
+                        
+                        <button onclick="location.href='/optimization/{{ scenario.id }}/optimize'" 
+                                class="btn btn-outline-info">
+                            <i class="fas fa-chart-line"></i> Optimize
+                        </button>
+                        
                         {% if scenario.is_active %}
                         <button onclick="deactivateScenario('{{ scenario.id }}')" 
                                 class="btn btn-outline-warning">

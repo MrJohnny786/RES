@@ -49,6 +49,7 @@ def create_scenario():
                 name=request.form["location_name"],
                 latitude=float(request.form["latitude"]),
                 longitude=float(request.form["longitude"]),
+                timezone=request.form["timezone"],  # New line to handle timezone
                 average_solar_hours=float(request.form["solar_hours"]),
                 average_wind_speed=float(request.form["wind_speed"]),
             )
@@ -66,25 +67,53 @@ def create_scenario():
             # Add PV panels
             pv_types = request.form.getlist("pvs")
             for pv_type in pv_types:
+                # Get PV model details from factory
+                pv_model = pv_factory.create_pv(pv_type)
+
                 quantity = int(request.form.get(f"pv_quantity_{pv_type}", 1))
                 pv = ScenarioPhotovoltaic(
-                    scenario=scenario, model_type=pv_type, quantity=quantity
+                    scenario=scenario,
+                    model_type=pv_type,
+                    quantity=quantity,
+                    capacity=pv_model.capacity_per_panel,  # Add capacity from model
+                    efficiency=pv_model.efficiency,  # Add efficiency from model
                 )
                 db.add(pv)
 
             # Add wind turbines
             turbine_types = request.form.getlist("turbines")
             for turbine_type in turbine_types:
+                # Get turbine model details from factory
+                turbine_model = turbine_factory.create_turbine(turbine_type)
+
                 quantity = int(request.form.get(f"turbine_quantity_{turbine_type}", 1))
                 turbine = ScenarioWindTurbine(
-                    scenario=scenario, turbine_type=turbine_type, quantity=quantity
+                    scenario=scenario,
+                    turbine_type=turbine_type,
+                    quantity=quantity,
+                    capacity=turbine_model.capacity,  # Add capacity from model
+                    cut_in_speed=turbine_model.cut_in_speed,  # Add cut-in speed from model
+                    cut_out_speed=turbine_model.cut_out_speed,  # Add cut-out speed from model
+                    rated_speed=getattr(
+                        turbine_model, "rated_speed", 15.0
+                    ),  # Add rated speed with fallback
                 )
                 db.add(turbine)
 
             # Add grid connection
             grid_type = request.form.get("grid_type")
             if grid_type:
-                grid = ScenarioGrid(scenario=scenario, grid_id=grid_type)
+                # Use the grid factory to get grid specs
+                grid_model = grid_factory.create_grid(grid_type)
+
+                # Create scenario grid with values from the model
+                grid = ScenarioGrid(
+                    scenario=scenario,
+                    grid_id=grid_type,
+                    capacity=grid_model.capacity,
+                    flexible_capacity=grid_model.flexible_capacity,
+                    voltage_level=grid_model.voltage_level,
+                )
                 db.add(grid)
 
             db.add(scenario)
@@ -126,9 +155,11 @@ def edit_scenario(id):
         scenario.description = request.form["description"]
 
         # Update location details
+        # Update location details
         scenario.location.name = request.form["location_name"]
         scenario.location.latitude = float(request.form["latitude"])
         scenario.location.longitude = float(request.form["longitude"])
+        scenario.location.timezone = request.form["timezone"]  # New line
         scenario.location.average_solar_hours = float(request.form["solar_hours"])
         scenario.location.average_wind_speed = float(request.form["wind_speed"])
 

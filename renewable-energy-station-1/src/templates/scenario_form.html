@@ -76,6 +76,27 @@
                     </div>
                 </div>
             </div>
+            <div class="row g-3 mt-3">
+                <div class="col-12">
+                    <label class="form-label">Timezone</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                        <select class="form-select" name="timezone" id="timezone" required>
+                            <option value="" disabled>Select timezone or use coordinates</option>
+                            <option value="UTC" selected>UTC</option>
+                            <option value="Europe/Athens">Europe/Athens</option>
+                            <option value="Europe/London">Europe/London</option>
+                            <option value="America/New_York">America/New_York</option>
+                            <option value="Asia/Tokyo">Asia/Tokyo</option>
+                            <option value="Australia/Sydney">Australia/Sydney</option>
+                            <!-- Add more common timezones as needed -->
+                        </select>
+                        <button type="button" class="btn btn-outline-secondary" onclick="detectTimezone()">
+                            <i class="fas fa-map-pin"></i> Detect from Coordinates
+                        </button>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- Components Configuration -->
@@ -257,6 +278,8 @@
     </form>
 </div>
 
+
+
 <style>
     .scenario-form {
         max-width: 1200px;
@@ -345,3 +368,4 @@
     }
 </style>
 {% endblock %}
+

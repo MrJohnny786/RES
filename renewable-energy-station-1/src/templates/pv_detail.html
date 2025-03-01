@@ -89,6 +89,9 @@
     </div>
 
     <div class="actions">
+        <a href="{{ url_for('photovoltaics.pv_forecast', pv_type=pv_type) }}" class="btn btn-primary">
+            <i class="fas fa-chart-line"></i> View Production Forecast
+        </a>
         <a href="{{ url_for('photovoltaics.list_pvs') }}" class="btn btn-secondary">Back to PVs</a>
     </div>
 </div>

@@ -1,6 +1,6 @@
 # src/api/photovoltaics.py
 from pathlib import Path
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, request, jsonify
 from src.models.photovoltaic_factory import PhotovoltaicFactory
 
 bp = Blueprint("photovoltaics", __name__, url_prefix="/photovoltaics")
@@ -33,3 +33,43 @@ def list_pvs():
 def pv_detail(pv_type):
     pv = pv_factory.create_pv(pv_type)
     return render_template("pv_detail.html", pv=pv, pv_type=pv_type)
+
+
+@bp.route("/<pv_type>/forecast")
+def pv_forecast(pv_type):
+    pv = pv_factory.create_pv(pv_type)
+
+    # Get parameters from query string
+    latitude = request.args.get("lat", type=float, default=40.0)
+    longitude = request.args.get("lon", type=float, default=20.0)
+    angle = request.args.get("angle", type=float, default=35.0)
+    azimuth = request.args.get("azimuth", type=float, default=0.0)
+
+    try:
+        forecast_data = pv.get_pvgis_forecast(
+            latitude=latitude,
+            longitude=longitude,
+            installation_angle=angle,
+            azimuth=azimuth,
+        )
+
+        # For AJAX requests return JSON
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify(forecast_data)
+
+        # Otherwise render the template
+        return render_template(
+            "pv_forecast.html",
+            pv=pv,
+            pv_type=pv_type,
+            forecast_data=forecast_data,
+            latitude=latitude,
+            longitude=longitude,
+            angle=angle,
+            azimuth=azimuth,
+        )
+    except Exception as e:
+        error_msg = str(e)
+        if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"error": error_msg}), 400
+        return render_template("error.html", error=error_msg)
