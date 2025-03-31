@@ -11,10 +11,10 @@ services:
       - .:/app
       - ./config:/app/config
     environment:
-      - FLASK_APP=src/app.py
-      - FLASK_ENV=development
-      - PYTHONPATH=/app/src
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/renewable_energy
+      FLASK_APP: src/app.py
+      FLASK_ENV: development
+      PYTHONPATH: /app/src
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/renewable_energy
     depends_on:
       db:
         condition: service_healthy
@@ -26,9 +26,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=renewable_energy
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: renewable_energy
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./compose/local/timescaledb/init.sql:/docker-entrypoint-initdb.d/init.sql
